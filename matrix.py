@@ -4,7 +4,7 @@ Based on:
 https://github.com/ozzloy/udacity-cs373/blob/master/unit-2.py
 """
 # pylint: disable=W0141,C0103
-
+import numpy as np
 
 class Matrix(object):
 
@@ -51,15 +51,8 @@ class Matrix(object):
 
     def __init__(self, value=None):
         """ Create a matrix from list of lists. """
-        if value is None:
-            value = [[]]
-            self._value = value
-            self.dimx = 0
-            self.dimy = 0
-        else:
-            self._value = value
-            self.dimx = len(value)
-            self.dimy = len(value[0])
+        self.value = np.array(value) if value is not None else np.array([[]])
+        self.dimx, self.dimy = self.value.shape
         self._T = None
         self._I = None
 
@@ -73,6 +66,7 @@ class Matrix(object):
         :setter: set value"""
         # Can't be sure if the user uses this to change a matrix entry so have
         # to reset existing cached inverse and transpose.
+
         self._T = None
         self._I = None
         return self._value
@@ -80,9 +74,8 @@ class Matrix(object):
     @value.setter
     def value(self, value):
         """ Set matrix value. """
-        self.dimx = len(value)
-        self.dimy = len(value[0])
-        self._value = value
+        self._value = np.array(value)
+        self.dimx, self.dimy = self._value.shape
         self._T = None
         self._I = None
 
@@ -101,21 +94,14 @@ class Matrix(object):
     ##################### Spawning special matrices ####################
     @classmethod
     def zero(cls, dimx, dimy):
-        """ Return a zero matrix of size *dimx* x *dimy*. """
-        if dimx < 1 or dimy < 1:
-            raise ValueError("Invalid size of matrix")
-        else:
-            value = [[0 for _ in range(dimy)] for _ in range(dimx)]
-            return cls(value)
+        value = np.zeros((dimx, dimy))
+        return cls(value)
 
     @classmethod
     def identity(cls, dim):
         """ Return an identity matrix of size *dim* x *dim*. """
-        if dim < 1:
-            raise ValueError("Invalid size of matrix")
-        self = cls.zero(dim, dim)
-        for i in range(dim):
-            self.value[i][i] = 1
+        value = np.identity(dim)
+        self = cls(value)
         return self
 
     ####################### Helper methods  ############################
@@ -159,78 +145,27 @@ class Matrix(object):
 
     def _transpose(self):
         """ Return a transpose of the matrix. """
-        dimx, dimy = self.size()
-        value = [[self[y][x] for y in range(dimx)] for x in range(dimy)]
+        value = self._value.T
         return Matrix(value)
 
     ############################ Arithmetics ###########################
     def __eq__(self, other):
-        return self.value == other.value
+        return (self.value == other.value).all()
 
     def __neq__(self, other):
-        return self.value != other.value
+        return (not self==other)
 
     def __add__(self, other):
-        if self.size() != other.size():
-            raise ValueError("Matrices are not the same size")
-        dimx, dimy = self.size()
-        new = [[self[x][y] + other[x][y] for y in range(dimy)] for x in
-               range(dimx)]
+        new = self._value + other._value
         return Matrix(new)
 
     def __sub__(self, other):
-        if self.size() != other.size():
-            raise ValueError("Matrices are not the same size")
-        dimx, dimy = self.size()
-        new = [[self[x][y] - other[x][y] for y in range(dimy)] for x in
-               range(dimx)]
+        new = self._value - other._value
         return Matrix(new)
 
     def __mul__(self, other):
-        _, dimy1 = self.size()
-        dimx2, _ = other.size()
-        if dimy1 != dimx2:
-            raise ValueError("Matrices do not have the proper dimensions")
-
-        # Easier to handle transposed matrix - columns of original are then
-        # lists
-        other = other.T
-
-        def func(row, col):
-            """ Return the vector product for row v and col v. """
-            # Row and column are the same length
-            # Create a list of tuples containing entries
-            zipped = zip(row, col)
-            # Reduce the tuples using multiplication
-            func = lambda tupl: tupl[0] * tupl[1]
-            mult = sum(func(tupl) for tupl in zipped)
-            return mult
-
-        # other is transposed, so columns can be accessed as lists
-        new = [[func(row, col) for col in other.value] for row in self.value]
+        new = np.dot(self._value, other._value)
         return Matrix(new)
-
-    # Special functions
-    def pivotize(self):
-        """
-        Return the pivoting matrix :math:`P` that rearranges the rows of
-        matrix :math:`M` such that the largest element in each column gets
-        placed on the diagonal. To make use of the pivoting matrix perform
-        leftside matrix multiplication:
-
-        .. math::
-            M^{'} = PM
-
-        :returns: matrix **P**
-        :rtype: *Matrix*
-        """
-        dim, _ = self.size()
-        P = Matrix.identity(dim)
-        for j in range(dim):
-            row = max(range(j, dim), key=lambda i: abs(self[i][j]))
-            if j != row:
-                P.value[j], P.value[row] = P.value[row], P.value[j]
-        return P
 
     def LU(self):
         """
@@ -247,105 +182,13 @@ class Matrix(object):
         :return: matrices **P, L, U**
         :rtype: *tuple(Matrix)*
         """
-        dimx, dimy = self.size()
-        if dimx != dimy:
-            raise ValueError("Matrix is not square")
-        dim = dimx
-        P = self.pivotize()
-        pivoted_self = P * self
-        L = Matrix.zero(dim, dim)
-        U = Matrix.identity(dim)
-
-        for i in range(dim):
-            for j in range(i, dim):
-                tot = 0.0
-                for k in range(i):
-                    tot += L[j][k] * U[k][i]
-                L[j][i] = pivoted_self[j][i] - tot
-            for j in range(i, dim):
-                tot = 0.0
-                for k in range(i):
-                    tot += L[i][k] * U[k][j]
-                if L[i][i] == 0:
-                    L[i][i] = 1e-40
-                U[i][j] = (pivoted_self[i][j] - tot) / L[i][i]
-
+        from scipy.linalg import lu
+        P, L, U = map(Matrix, lu(self._value,permute_l=False))
         return (P, L, U)
 
-    @staticmethod
-    def LUInvert(P, L, U):
-        """
-        Return the inverse matrix of the matrix :math:`A` defined by the
-        equation :math:`PA = LU` where :math:`L, U` are the LU decomposition
-        matrices and :math:`P` is the matrix used for pivoting.
-
-        The method works by looking at the solution to the system
-
-        .. math::
-            LU \\cdot X = B
-
-        column by column (uncapitalized letters symbolize column vectors,
-        capitals represent the matrix of column vectors).
-        :math:`B` is :math:`\\mathbb{1}` - the identity matrix.
-        First
-
-        .. math::
-            L \\cdot y = b
-
-        is solved, then
-
-        .. math::
-            U \\cdot x = y
-
-        The inverse matrix is then :math:`X`, the matrix of column vectors
-        :math:`x`. Since :math:`L` and :math:`U` are both triangular matrices,
-        the solution of these systems can be found through simple gaussian
-        elimination.
-
-        In the final step the inverse matrix :math:`X` is multiplied from the
-        rightside with the pivoting matrix, to undo the pivoting. If you do
-        not want depivoting, pass ``P = None``.
-
-        :param Matrix P: pivoting matrix
-        :param Matrix L: lower triangular matrix
-        :param Matrix U: upper triangular matrix
-        :return: inverse matrix **A** defined above
-        :rtype: *Matrix*
-        """
-
-        dim, _ = L.size()
-        inverted = Matrix.zero(dim, dim)
-        # unit = Matrix.identity(dim)
-        # Upper elimination
-        try:
-            for i in range(dim):
-                col_y = [0 for _ in range(dim)]
-
-                # The j'th row of the i'th column in an identity matrix will be
-                # the first one with a one
-                col_y[i] = 1.0 / L[i][i]
-                for j in range(i + 1, dim):
-                    rest = sum(l * y for y, l in zip(col_y[i:j], L[j][i:j]))
-                    col_y[j] = -rest / L[j][j]
-                col_x = [0 for _ in range(dim)]
-                for j in reversed(range(dim)):
-                    rest = sum(
-                        u * x for x, u in zip(col_x[j:dim], U[j][j:dim]))
-                    col_x[j] = (col_y[j] - rest) / U[j][j]
-                    inverted[j][i] = col_x[j]
-                # inverted[i] = col_y # <-- needs a __set_item__ method
-        except ZeroDivisionError:
-            print "Matrix is not invertible"
-        # Undo the pivoting
-        if P is None:
-            return inverted
-        else:
-            return inverted * P
-
     def _inverse(self):
-        """ Return the inverse matrix. """
-        P, L, U = self.LU()
-        new = Matrix.LUInvert(P, L, U)
+        from numpy.linalg import inv
+        new = Matrix(inv(self._value))
         return new
 
     @property
