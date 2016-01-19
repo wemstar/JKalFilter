@@ -1,6 +1,10 @@
 """ A module for testing the functioning of the kfilter module. """
-from ..kfilter import LKFilter
-from ..matrix import Matrix
+from JKalFilter.kfilter import LKFilter
+import os
+if os.environ.get('USE_CUDA'):
+    from JKalFilter.matrix_cuda import MatrixCuda as Matrix
+else:
+    from JKalFilter.matrix import Matrix
 import random
 import sys
 # pylint: disable=C0103,W0141,R0914
