@@ -26,4 +26,4 @@ install:
   - python setup.py install
 
 # Run test
-script: python JKalFilter/test/test_matrix.py
+#script: python JKalFilter/test/test_matrix.py
