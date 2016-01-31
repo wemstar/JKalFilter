@@ -2,7 +2,11 @@
 Fitting module: fit tracks to hits contained within a detector with the help
 of Kalman Filters.
 """
-from matrix import Matrix
+import os
+if os.environ.get('USE_CUDA'):
+    from matrix_cuda import MatrixCuda as Matrix
+else:
+    from matrix import Matrix
 from detector import Detector
 from kfilter import TwoWayLKFilter
 from copy import copy

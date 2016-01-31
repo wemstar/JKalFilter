@@ -5,7 +5,11 @@
        (:py:class:`.TwoWayLKFilter`)
 """
 # pylint: disable=C0103,R0192
-from matrix import Matrix
+import os
+if os.environ.get('USE_CUDA'):
+    from matrix_cuda import MatrixCuda as Matrix
+else:
+    from matrix import Matrix
 import collections
 
 

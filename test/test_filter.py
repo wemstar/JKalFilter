@@ -1,6 +1,11 @@
 """ A module for testing the functioning of the kfilter module. """
+<<<<<<< HEAD
 from ..kfilter_theano import LKFilterTheano
-from ..matrix import Matrix
+import os
+if os.environ.get('USE_CUDA'):
+    from JKalFilter.matrix_cuda import MatrixCuda as Matrix
+else:
+    from JKalFilter.matrix import Matrix
 import random
 import sys
 # pylint: disable=C0103,W0141,R0914

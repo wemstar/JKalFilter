@@ -1,11 +1,15 @@
 """ Test of fitting. """
 # pylint: disable=C0103
-from ..matrix import Matrix
-from ..detector import LayeredDetector
-from ..track import gen_straight_tracks
+import os
+if os.environ.get('USE_CUDA'):
+    from JKalFilter.matrix_cuda import MatrixCuda as Matrix
+else:
+    from JKalFilter.matrix import Matrix
+from JKalFilter.detector import LayeredDetector
+from JKalFilter.track import gen_straight_tracks
 from matplotlib import pyplot as plt
-from ..fitter import FitManager
-from ..kfilter import TwoWayLKFilter
+from JKalFilter.fitter import FitManager
+from JKalFilter.kfilter import TwoWayLKFilter
 plt.ion()
 
 
