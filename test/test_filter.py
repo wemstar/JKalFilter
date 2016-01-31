@@ -1,5 +1,5 @@
 """ A module for testing the functioning of the kfilter module. """
-from ..kfilter import LKFilter
+from ..kfilter_theano import LKFilterTheano
 from ..matrix import Matrix
 import random
 import sys
@@ -31,7 +31,7 @@ def test(N=10):
     meas_list = [i + rand(0, 2) for i in xrange(N)]
     measurements = [Matrix([[meas]]) for meas in meas_list]
 
-    filt = LKFilter(A, H, init_state, init_cov, Q, R)
+    filt = LKFilterTheano(A, H, init_state, init_cov, Q, R)
     results = [x0]
 
     filt.add_meas(measurements)
@@ -59,7 +59,7 @@ def test_square(N=10):
     rand = random.gauss
     meas_list = [2+(i*dt)**2 + rand(0, 1) for i in xrange(N)]
     measurements = [Matrix([[meas]]) for meas in meas_list]
-    filt = LKFilter(A, H, x, P, Q, R)
+    filt = LKFilterTheano(A, H, x, P, Q, R)
     results = [x0]
     v = [0.0]
     a = [0.0]
